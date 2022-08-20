@@ -1,0 +1,1 @@
+# weshopify-categories-ms
