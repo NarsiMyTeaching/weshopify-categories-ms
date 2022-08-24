@@ -10,6 +10,7 @@ import java.util.TreeSet;
 
 import javax.transaction.Transactional;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import com.weshopify.platform.features.categories.bean.CategoryBean;
 import com.weshopify.platform.features.categories.bean.CategoryPageInfo;
 import com.weshopify.platform.features.categories.domain.Category;
 import com.weshopify.platform.features.categories.exceptions.CategoryNotFoundException;
@@ -218,6 +220,18 @@ public class CategoryService {
 	public Category updateCategoryEnabledStatus(Integer id, boolean enabled) {
 		return repo.updateEnabledStatus(id, enabled);
 	}
+	
+	public CategoryBean updateCategory(CategoryBean catBean) {
+		Category categoryEntity = new Category();
+		categoryEntity = repo.findById(catBean.getId()).get();
+		BeanUtils.copyProperties(catBean, categoryEntity);
+		categoryEntity = repo.save(categoryEntity);
+		BeanUtils.copyProperties(categoryEntity, catBean);
+		
+		return catBean;
+		
+	}
+	
 	
 	public void delete(Integer id) throws CategoryNotFoundException {
 		Long countById = repo.countById(id);

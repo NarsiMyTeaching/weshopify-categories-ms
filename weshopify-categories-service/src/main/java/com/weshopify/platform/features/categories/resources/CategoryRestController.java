@@ -1,31 +1,47 @@
 package com.weshopify.platform.features.categories.resources;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.weshopify.platform.features.categories.bean.CategoryBean;
 import com.weshopify.platform.features.categories.bean.CategoryPageInfo;
 import com.weshopify.platform.features.categories.domain.Category;
 import com.weshopify.platform.features.categories.exceptions.CategoryNotFoundException;
 import com.weshopify.platform.features.categories.service.CategoryService;
+
 
 @RestController
 public class CategoryRestController {
 
 	@Autowired
 	private CategoryService service;
+	
+	@Value("${file.storage.location}")
+	private String fileStorageLocation;
 	
 	@PostMapping("/categories/check_unique")
 	public String checkUnique(@Param("id") Integer id, @Param("name") String name,
@@ -58,25 +74,63 @@ public class CategoryRestController {
 	}
 	
 	
-	@PostMapping(value="/categories/save")
-	public String saveCategory(Category category, 
-			@RequestParam("fileImage") MultipartFile multipartFile,
-			RedirectAttributes ra) throws IOException {
-		if (!multipartFile.isEmpty()) {
-			String fileName = StringUtils.cleanPath(multipartFile.getOriginalFilename());
-			category.setImage(fileName);
-
-			Category savedCategory = service.save(category);
+	@PostMapping(value="/categories",consumes = {MediaType.MULTIPART_FORM_DATA_VALUE,MediaType.APPLICATION_JSON_VALUE})
+	public String saveCategory(@RequestPart String category, final @RequestParam("file") MultipartFile file) throws IOException {
+		Category categoryEntity = new Category();
+		if (!file.isEmpty()) {
+			
+			Path filePath = Paths.get(fileStorageLocation);
+			  File f1 = new File(filePath+"/"+file.getOriginalFilename().substring(0, file.getOriginalFilename().indexOf('.'))
+		    		  + UUID.randomUUID()+file.getOriginalFilename().substring(file.getOriginalFilename().indexOf('.')));
+			  file.transferTo(f1);
+			String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+			ObjectMapper mapper = new ObjectMapper();
+			JsonParser jsonParser = mapper.createParser(category);
+			CategoryBean catbean = mapper.readValue(jsonParser, CategoryBean.class);
+			System.out.println(catbean.toString());
+			BeanUtils.copyProperties(catbean, categoryEntity);
+			categoryEntity.setImage(fileName);
+			Category savedCategory = service.save(categoryEntity);
 			String uploadDir = "category-images/" + savedCategory.getId();
 			
 			//AmazonS3Util.removeFolder(uploadDir);
 			//AmazonS3Util.uploadFile(uploadDir, fileName, multipartFile.getInputStream());
 		} else {
-			service.save(category);
+			
+			BeanUtils.copyProperties(category, categoryEntity);
+			service.save(categoryEntity);
 		}
 		
-		ra.addFlashAttribute("message", "The category has been saved successfully.");
-		return "redirect:/categories";
+		//ra.addFlashAttribute("message", "The category has been saved successfully.");
+		BeanUtils.copyProperties(categoryEntity, category);
+		return category;
+	}
+	
+	@PutMapping(value="/categories",consumes = {MediaType.MULTIPART_FORM_DATA_VALUE,MediaType.APPLICATION_JSON_VALUE})
+	public CategoryBean updateCategory(@RequestPart String category, final @RequestParam("file") MultipartFile file) throws IOException {
+		ObjectMapper mapper = new ObjectMapper();
+		JsonParser jsonParser = mapper.createParser(category);
+		CategoryBean catBean = mapper.readValue(jsonParser, CategoryBean.class);
+		System.out.println(catBean.toString());
+		
+		if (!file.isEmpty()) {
+			
+			Path filePath = Paths.get(fileStorageLocation);
+			  File f1 = new File(filePath+"/"+file.getOriginalFilename().substring(0, file.getOriginalFilename().indexOf('.'))
+		    		  + UUID.randomUUID()+file.getOriginalFilename().substring(file.getOriginalFilename().indexOf('.')));
+			  file.transferTo(f1);
+			String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+			
+			//categoryEntity.setImage(fileName);
+			//catbean = service.updateCategory(catbean);
+			//String uploadDir = "category-images/" + savedCategory.getId();
+			
+			//AmazonS3Util.removeFolder(uploadDir);
+			//AmazonS3Util.uploadFile(uploadDir, fileName, multipartFile.getInputStream());
+			//return catBean;
+		}
+		catBean = service.updateCategory(catBean);
+		return catBean;
 	}
 	
 	@GetMapping(value="/categories/{id}/enabled/{status}")
