@@ -25,7 +25,7 @@ spring:
          
    
 server: 
- port: 5002
+ port: 6002
  
 weshopify: 
  app: 
