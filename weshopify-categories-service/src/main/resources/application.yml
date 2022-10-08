@@ -25,7 +25,7 @@ spring:
          
    
 server: 
- port: 5002
+ port: 5004
  
 weshopify: 
  app: 
@@ -39,9 +39,11 @@ logging:  file:    name: application.logs
       clean-history-on-start: true 
 file: 
   storage: 
-    location: '${CATEGRIES_FILES_STORAGE:D:/trainigs_ws/LOCAL_FILE_STORAGE}'
+    location: '${CATEGRIES_FILES_STORAGE:C:/Users/nsanda/git/weshopify-categories-ms/LOCAL_FILE_STORAGE}'
 
-        
+eureka: 
+ instance: 
+    preferIpAddress: true         
 ---
 #
 # Dev Environment Configurations
@@ -66,4 +68,6 @@ spring:
   url: jdbc:${DB_TYPE:h2}:mem:${DB_SCHEMA:shopifyme}
   username: ${DB_USER_NAME:sa}
   password: ${DB_USER_NAME:sa}
+  
+ 
   
